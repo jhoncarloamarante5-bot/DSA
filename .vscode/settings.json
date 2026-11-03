@@ -1,0 +1,12 @@
+{
+  "java.enabled": false,
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-1.8",
+      "path": "C:\\Program Files\\Eclipse Adoptium\\jdk-8.0.504.1-hotspot",
+      "default": true
+    }
+  ]
+}
+
