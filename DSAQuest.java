@@ -27,6 +27,7 @@ class DSAQuest extends JFrame {
 
     private JComboBox<String> topicBox;
     private JComboBox<String> difficultyBox;
+    private JComboBox<String> challengeBox;
 
     private JLabel questionLabel;
     private JLabel progressLabel;
@@ -52,6 +53,15 @@ class DSAQuest extends JFrame {
     private int answeredCount = 0;
     private int streak = 0;
     private int timeLeft = 30;
+    private int playerXP = 0;
+    private int playerLevel = 1;
+    private boolean questMode = false;
+    private boolean bossMode = false;
+    private boolean dailyChallenge = false;
+    private String currentQuestTopic = "All Topics";
+    private JPanel homeXpBadge;
+    private JPanel homeLevelBadge;
+    private JPanel homeQuestBadge;
 
     static class Question {
         String topic;
@@ -416,7 +426,42 @@ class DSAQuest extends JFrame {
         mainPanel.add(createResultPanel(), "RESULT");
 
         add(mainPanel);
+        refreshHomeProgress();
         cardLayout.show(mainPanel, "HOME");
+    }
+
+    private void refreshHomeProgress() {
+        if (homeXpBadge != null) {
+            JLabel valueLabel = (JLabel) homeXpBadge.getComponent(0);
+            valueLabel.setText("XP " + playerXP);
+        }
+        if (homeLevelBadge != null) {
+            JLabel valueLabel = (JLabel) homeLevelBadge.getComponent(0);
+            valueLabel.setText("LV " + playerLevel);
+        }
+        if (homeQuestBadge != null) {
+            JLabel valueLabel = (JLabel) homeQuestBadge.getComponent(0);
+            valueLabel.setText(getSelectedModeLabel());
+        }
+    }
+
+    private String getSelectedModeLabel() {
+        if (challengeBox == null) {
+            return "CLASSIC";
+        }
+
+        String selectedMode = (String) challengeBox.getSelectedItem();
+        if ("Boss Rush".equals(selectedMode)) {
+            return "BOSS";
+        }
+        if ("Daily Challenge".equals(selectedMode)) {
+            return "DAILY";
+        }
+        if ("Quest".equals(selectedMode)) {
+            String selectedTopic = (String) topicBox.getSelectedItem();
+            return selectedTopic.toUpperCase();
+        }
+        return "CLASSIC";
     }
 
     private JPanel createHomePanel() {
@@ -427,8 +472,9 @@ class DSAQuest extends JFrame {
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 10));
         topBar.setOpaque(false);
         exitButton = createButton("EXIT", new Color(239, 68, 68));
-        exitButton.setPreferredSize(new Dimension(120, 42));
-        exitButton.addActionListener(e -> dispose());
+        exitButton.setPreferredSize(new Dimension(130, 46));
+        exitButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        exitButton.addActionListener(e -> quitGame());
         topBar.add(exitButton);
         panel.add(topBar, BorderLayout.NORTH);
 
@@ -495,13 +541,13 @@ class DSAQuest extends JFrame {
         featureBar.setOpaque(false);
         featureBar.setMaximumSize(new Dimension(560, 70));
 
-        JPanel level = makeStatBadge("10+ TOPICS", "ACTIVE");
-        JPanel timer = makeStatBadge("30s", "PER ROUND");
-        JPanel mode = makeStatBadge("3 LEVELS", "DIFFICULTY");
+        homeXpBadge = makeStatBadge("XP " + playerXP, "PROGRESS");
+        homeLevelBadge = makeStatBadge("LV " + playerLevel, "RANK");
+        homeQuestBadge = makeStatBadge("CLASSIC", "MODE");
 
-        featureBar.add(level);
-        featureBar.add(timer);
-        featureBar.add(mode);
+        featureBar.add(homeXpBadge);
+        featureBar.add(homeLevelBadge);
+        featureBar.add(homeQuestBadge);
 
         JLabel footerNote = new JLabel("DSA PRACTICE MODE");
         footerNote.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -542,6 +588,19 @@ class DSAQuest extends JFrame {
         });
         styleCombo(difficultyBox);
 
+        JLabel challengeTitle = new JLabel("SELECT MODE");
+        styleLabel(challengeTitle);
+
+        challengeBox = new JComboBox<>(new String[]{
+            "Classic",
+            "Quest",
+            "Boss Rush",
+            "Daily Challenge"
+        });
+        styleCombo(challengeBox);
+        challengeBox.addActionListener(e -> refreshHomeProgress());
+        topicBox.addActionListener(e -> refreshHomeProgress());
+
         JButton startButton = createButton("START GAME", GREEN);
         startButton.setPreferredSize(new Dimension(260, 52));
         startButton.addActionListener(e -> startGame());
@@ -567,6 +626,10 @@ class DSAQuest extends JFrame {
         optionCard.add(difficultyTitle);
         optionCard.add(Box.createVerticalStrut(8));
         optionCard.add(difficultyBox);
+        optionCard.add(Box.createVerticalStrut(14));
+        optionCard.add(challengeTitle);
+        optionCard.add(Box.createVerticalStrut(8));
+        optionCard.add(challengeBox);
         optionCard.add(Box.createVerticalStrut(22));
         optionCard.add(startButton);
         optionCard.add(Box.createVerticalStrut(10));
@@ -731,7 +794,7 @@ class DSAQuest extends JFrame {
 
         JButton exitButton = createButton("EXIT GAME", BLUE);
         exitButton.setPreferredSize(new Dimension(260, 52));
-        exitButton.addActionListener(e -> dispose());
+        exitButton.addActionListener(e -> quitGame());
 
         panel.add(title);
         panel.add(Box.createVerticalStrut(20));
@@ -912,12 +975,60 @@ class DSAQuest extends JFrame {
         answeredCount = 0;
         streak = 0;
         timeLeft = 30;
+        questMode = false;
+        bossMode = false;
+        dailyChallenge = false;
+        currentQuestTopic = "All Topics";
+        refreshHomeProgress();
         cardLayout.show(mainPanel, "HOME");
+    }
+
+    private void quitGame() {
+        JDialog dialog = new JDialog(this, "Exit Game", true);
+        dialog.setSize(360, 180);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout(16, 16));
+        dialog.getContentPane().setBackground(new Color(11, 18, 31));
+
+        JLabel message = new JLabel("Do you want to exit?", SwingConstants.CENTER);
+        message.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        message.setForeground(new Color(240, 244, 255));
+        message.setBorder(new EmptyBorder(20, 20, 10, 20));
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 18, 8));
+        buttonPanel.setOpaque(false);
+
+        JButton yesButton = createButton("YES", GREEN);
+        yesButton.setPreferredSize(new Dimension(110, 42));
+        yesButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        yesButton.addActionListener(e -> {
+            dialog.dispose();
+            dispose();
+            System.exit(0);
+        });
+
+        JButton noButton = createButton("NO", BLUE);
+        noButton.setPreferredSize(new Dimension(110, 42));
+        noButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        noButton.addActionListener(e -> dialog.dispose());
+
+        buttonPanel.add(yesButton);
+        buttonPanel.add(noButton);
+
+        dialog.add(message, BorderLayout.CENTER);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+        dialog.setVisible(true);
     }
 
     private void startGame() {
         String selectedTopic = (String) topicBox.getSelectedItem();
         String selectedDifficulty = (String) difficultyBox.getSelectedItem();
+        String selectedMode = (String) challengeBox.getSelectedItem();
+
+        questMode = "Quest".equals(selectedMode) || "Daily Challenge".equals(selectedMode);
+        bossMode = "Boss Rush".equals(selectedMode);
+        dailyChallenge = "Daily Challenge".equals(selectedMode);
+        currentQuestTopic = selectedTopic;
 
         quizQuestions = new ArrayList<>();
 
@@ -955,8 +1066,17 @@ class DSAQuest extends JFrame {
             questionTimer.stop();
         }
 
-        timeLeft = 30;
-        timeLabel.setText("Time: 30s");
+        int roundTime = 30;
+        if (bossMode) {
+            roundTime = 22;
+        } else if (dailyChallenge) {
+            roundTime = 20;
+        } else if (questMode) {
+            roundTime = 26;
+        }
+
+        timeLeft = roundTime;
+        timeLabel.setText("Time: " + roundTime + "s");
 
         questionTimer = new Timer(1000, e -> {
             timeLeft--;
@@ -989,7 +1109,8 @@ class DSAQuest extends JFrame {
 
         Question q = quizQuestions.get(currentQuestion);
 
-        progressLabel.setText("Question " + (currentQuestion + 1) + " / " + quizQuestions.size());
+        String questPrefix = questMode ? "Quest: " + currentQuestTopic + " • " : "Question ";
+        progressLabel.setText(questPrefix + (currentQuestion + 1) + " / " + quizQuestions.size());
         updateScoreboard();
         startQuestionTimer();
 
@@ -1100,6 +1221,12 @@ class DSAQuest extends JFrame {
             message = "Keep learning! You can do better!";
         }
 
+        if (bossMode) {
+            message = "Boss challenge cleared! " + message;
+        } else if (dailyChallenge) {
+            message = "Daily challenge completed! " + message;
+        }
+
         if (resultMessage != null) {
             resultMessage.setText(
                 "<html><center>" + message + "<br><br>" +
@@ -1108,8 +1235,22 @@ class DSAQuest extends JFrame {
             );
         }
 
+        int xpEarned = 25 + correctAnswers * 20 + score / 2;
+        if (questMode) {
+            xpEarned += 30;
+        }
+        if (bossMode) {
+            xpEarned += 40;
+        }
+        if (dailyChallenge) {
+            xpEarned += 50;
+        }
+        playerXP += xpEarned;
+        playerLevel = 1 + (playerXP / 200);
+        refreshHomeProgress();
+
         if (leaderboard != null) {
-            leaderboard.setText("LEADERBOARD: " + correctAnswers + " wins • Streak: " + streak + " • Rank: " + getRankLabel(percentage));
+            leaderboard.setText("QUEST REWARD: +" + xpEarned + " XP • LEVEL " + playerLevel + " • " + getRankLabel(percentage));
         }
     }
 
